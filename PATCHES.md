@@ -164,8 +164,26 @@ git -C D:\AI\IndexTTS\index-tts apply --reverse patches\indextts-infer_v2_5.patc
 
 ## 跟上游同步
 
-`origin` 仍然指向上游（便于跟进）：`git fetch origin && git merge origin/main`。
-若上游将来自己做了 IndexTTS 或 instruct 相关实现，优先看上游版本，再决定本 fork 的补丁是否还需要保留。
+- `origin` 指向上游 `jamiepine/voicebox`（便于跟进），`fork` 指向本仓库。
+  同步：`git fetch origin && git merge origin/main`，解决冲突后 `git push fork main`。
+- 若上游将来自己做了 IndexTTS 或 instruct 相关实现，优先看上游版本，再决定本 fork 的补丁是否还要保留。
+
+### 第一次推送时踩到的两个坑（已解决，记录备查）
+
+1. **原 clone 是 shallow 的**（只有 1 个提交深度）。shallow 仓库直接 push 会被远端拒：
+   `remote: fatal: did not receive expected object … / remote unpack failed: index-pack failed`。
+   解决：`git fetch --unshallow origin`（本机实测 10.6 s，补完 814 个提交、pack 约 99 MB），再 push。
+2. **GitHub 的邮箱隐私保护**会拒收带着"私有邮箱"的提交：
+   `GH007: Your push would publish a private email address`。
+   解决：把提交身份换成 noreply 邮箱后重新提交：
+
+   ```powershell
+   git config user.name  "hmisaki"
+   git config user.email "hmisaki@users.noreply.github.com"
+   git commit --amend --reset-author --no-edit   # 或在后续提交里直接用这个身份
+   ```
+
+推上去之后实测：整仓（814 个提交 + 814 个历史 tag 里的 release tag）首次推送约 22 s / 99 MB。
 
 ## 不含什么
 
