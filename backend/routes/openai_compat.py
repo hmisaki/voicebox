@@ -377,7 +377,7 @@ async def _create_speech(request: Request, db: Session) -> Response:
             data.input,
             voice_prompt,
             language=getattr(profile, "language", None) or "en",
-            instruct=data.instructions,
+            instruct=profiles.resolve_instruct(profile, data.instructions),
             trim_fn=trim_fn,
             runaway_detector=runaway_detector,
         )

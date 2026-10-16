@@ -78,6 +78,17 @@ async def run_generation(
     bg_db = next(get_db())
     tts_model = None
 
+    if instruct is None or not instruct.strip():
+        # 兜底：请求没带「传达说明」时用档案上的默认值。放在这里，是为了让
+        # 所有入队路径（网页、MCP、speak、重跑）行为一致。
+        try:
+            from ..database import VoiceProfile as _DBVoiceProfile
+
+            _row = bg_db.query(_DBVoiceProfile).filter_by(id=profile_id).first()
+            instruct = profiles.resolve_instruct(_row, None) if _row else None
+        except Exception as exc:  # pragma: no cover - 兜底不该影响主流程
+            logging.getLogger(__name__).debug("resolve default instruct failed: %s", exc)
+
     try:
         tts_model = get_tts_backend_for_engine(engine)
 

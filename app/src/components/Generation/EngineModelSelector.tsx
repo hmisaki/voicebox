@@ -29,6 +29,7 @@ const ENGINE_OPTIONS = [
   { value: 'tada:3B', label: 'TADA 3B Multilingual', engine: 'tada' },
   { value: 'kokoro', label: 'Kokoro 82M', engine: 'kokoro' },
   { value: 'omnivoice', label: 'OmniVoice (non-commercial)', engine: 'omnivoice' },
+  { value: 'indextts', label: 'IndexTTS 2.5 (Zero-shot cloning)', engine: 'indextts' },
 ] as const;
 
 const ENGINE_DESCRIPTIONS: Record<string, string> = {
@@ -41,6 +42,7 @@ const ENGINE_DESCRIPTIONS: Record<string, string> = {
   tada: 'HumeAI, 700s+ coherent audio',
   kokoro: '82M params, CPU realtime, 8 langs',
   omnivoice: '23 languages, voice design. CC-BY-NC weights: non-commercial use only',
+  indextts: 'Zero-shot cloning (zh/en/ja/es/ar), native 0.5-2.0x speed control',
 };
 
 /** Engines that only support English and should force language to 'en' on select. */
@@ -54,6 +56,7 @@ const CLONING_ENGINES = new Set([
   'chatterbox_turbo',
   'tada',
   'omnivoice',
+  'indextts',
 ]);
 
 /** Engines that synthesise a voice from a written description. */

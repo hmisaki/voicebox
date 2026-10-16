@@ -20,6 +20,8 @@ export interface ProfileFormDraft {
   description: string;
   language: string;
   personality: string;
+  /** Default 「传达说明」 being typed for the profile. */
+  defaultInstruct?: string;
   referenceText: string;
   sampleMode: 'upload' | 'record' | 'system';
   /** Which creation mode was open, so a restored draft reopens as itself. */

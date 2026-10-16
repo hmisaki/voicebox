@@ -66,6 +66,9 @@ async def generate_speech(
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
 
+    # 请求里的「传达说明」优先，没写就用档案上的默认值（记进历史，便于复现）。
+    instruct = profiles.resolve_instruct(profile, data.instruct)
+
     from ..backends import engine_has_model_sizes
 
     engine = _resolve_generation_engine(data, profile)
@@ -96,7 +99,7 @@ async def generate_speech(
         duration=0,
         seed=data.seed,
         db=db,
-        instruct=data.instruct,
+        instruct=instruct,
         generation_id=generation_id,
         status="generating",
         engine=engine,
@@ -135,7 +138,7 @@ async def generate_speech(
             seed=data.seed,
             normalize=data.normalize,
             effects_chain=effects_chain_config,
-            instruct=data.instruct,
+            instruct=instruct,
             mode="generate",
             max_chunk_chars=data.max_chunk_chars,
             crossfade_ms=data.crossfade_ms,
@@ -370,7 +373,7 @@ async def stream_speech(
             voice_prompt,
             language=data.language,
             seed=data.seed,
-            instruct=data.instruct,
+            instruct=profiles.resolve_instruct(profile, data.instruct),
             max_chunk_chars=data.max_chunk_chars,
             crossfade_ms=data.crossfade_ms,
             trim_fn=trim_fn,

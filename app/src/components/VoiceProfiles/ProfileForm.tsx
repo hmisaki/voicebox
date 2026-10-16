@@ -76,6 +76,7 @@ const DEFAULT_ENGINE_OPTIONS = [
   { value: 'tada', label: 'TADA' },
   { value: 'kokoro', label: 'Kokoro 82M' },
   { value: 'omnivoice', label: 'OmniVoice (non-commercial)' },
+  { value: 'indextts', label: 'IndexTTS 2.5' },
 ] as const;
 
 function makeProfileSchema(t: (key: string) => string) {
@@ -84,6 +85,7 @@ function makeProfileSchema(t: (key: string) => string) {
     description: z.string().max(500).optional(),
     language: z.enum(LANGUAGE_CODES as [LanguageCode, ...LanguageCode[]]),
     personality: z.string().max(2000).optional(),
+    default_instruct: z.string().max(500).optional(),
     sampleFile: z.instanceof(File).optional(),
     referenceText: z.string().max(1000).optional(),
     avatarFile: z.instanceof(File).optional(),
@@ -108,6 +110,7 @@ type ProfileFormValues = {
   description?: string;
   language: LanguageCode;
   personality?: string;
+  default_instruct?: string;
   sampleFile?: File;
   referenceText?: string;
   avatarFile?: File;
@@ -176,6 +179,7 @@ export function ProfileForm() {
       description: '',
       language: 'en',
       personality: '',
+      default_instruct: '',
       sampleFile: undefined,
       referenceText: '',
       avatarFile: undefined,
@@ -342,6 +346,7 @@ export function ProfileForm() {
         description: editingProfile.description || '',
         language: editingProfile.language as LanguageCode,
         personality: editingProfile.personality || '',
+        default_instruct: editingProfile.default_instruct || '',
         sampleFile: undefined,
         referenceText: undefined,
         avatarFile: undefined,
@@ -356,6 +361,7 @@ export function ProfileForm() {
         description: profileFormDraft.description,
         language: profileFormDraft.language as LanguageCode,
         personality: profileFormDraft.personality || '',
+        default_instruct: profileFormDraft.defaultInstruct || '',
         referenceText: profileFormDraft.referenceText,
         sampleFile: undefined,
         avatarFile: undefined,
@@ -385,6 +391,7 @@ export function ProfileForm() {
         description: '',
         language: 'en',
         personality: '',
+        default_instruct: '',
         sampleFile: undefined,
         referenceText: undefined,
         avatarFile: undefined,
@@ -511,6 +518,9 @@ export function ProfileForm() {
             language: data.language,
             default_engine: defaultEngine || undefined,
             personality: data.personality?.trim() ? data.personality.trim() : undefined,
+            default_instruct: data.default_instruct?.trim()
+              ? data.default_instruct.trim()
+              : undefined,
           },
         });
 
@@ -577,6 +587,9 @@ export function ProfileForm() {
           preset_voice_id: selectedPresetVoiceId,
           default_engine: selectedPresetEngine,
           personality: data.personality?.trim() ? data.personality.trim() : undefined,
+          default_instruct: data.default_instruct?.trim()
+            ? data.default_instruct.trim()
+            : undefined,
         });
 
         // Handle avatar upload if provided
@@ -622,6 +635,9 @@ export function ProfileForm() {
           design_prompt: trimmedDesign,
           default_engine: DESIGN_ENGINE,
           personality: data.personality?.trim() ? data.personality.trim() : undefined,
+          default_instruct: data.default_instruct?.trim()
+            ? data.default_instruct.trim()
+            : undefined,
         });
 
         // Handle avatar upload if provided
@@ -719,6 +735,9 @@ export function ProfileForm() {
           language: data.language,
           default_engine: defaultEngine || undefined,
           personality: data.personality?.trim() ? data.personality.trim() : undefined,
+          default_instruct: data.default_instruct?.trim()
+            ? data.default_instruct.trim()
+            : undefined,
         });
 
         // Convert non-WAV uploads to WAV so the backend can always use soundfile.
@@ -827,6 +846,7 @@ export function ProfileForm() {
           description: values.description || '',
           language: values.language || 'en',
           personality: values.personality || '',
+          defaultInstruct: values.default_instruct || '',
           referenceText: values.referenceText || '',
           sampleMode,
           voiceSource,
@@ -892,6 +912,7 @@ export function ProfileForm() {
                       description: '',
                       language: 'en',
                       personality: '',
+                      default_instruct: '',
                       sampleFile: undefined,
                       referenceText: '',
                       avatarFile: undefined,
@@ -1209,9 +1230,7 @@ export function ProfileForm() {
                           <div className="text-sm font-medium text-muted-foreground">
                             {t('profileForm.design.badge')}
                           </div>
-                          <p className="text-sm leading-relaxed">
-                            {editingProfile.design_prompt}
-                          </p>
+                          <p className="text-sm leading-relaxed">{editingProfile.design_prompt}</p>
                           <Badge variant="secondary" className="text-xs">
                             {editingProfile.default_engine}
                           </Badge>
@@ -1326,8 +1345,27 @@ export function ProfileForm() {
                             {...field}
                           />
                         </FormControl>
+                        <FormDescription>{t('profileForm.fields.personalityHint')}</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="default_instruct"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('profileForm.fields.defaultInstructLabel')}</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder={t('profileForm.fields.defaultInstructPlaceholder')}
+                            className="min-h-[72px] font-mono text-sm"
+                            {...field}
+                          />
+                        </FormControl>
                         <FormDescription>
-                          {t('profileForm.fields.personalityHint')}
+                          {t('profileForm.fields.defaultInstructHint')}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

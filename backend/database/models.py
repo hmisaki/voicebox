@@ -43,6 +43,12 @@ class VoiceProfile(Base):
     # says and how, orthogonal to how it sounds (handled by the preset /
     # cloning metadata above).
     personality = Column(Text, nullable=True)
+    # Default 「传达说明」(instruct) for this voice. Free-form key=value text whose
+    # meaning is per-engine (e.g. speed=1.2 / emo_text=... / steps=15 for IndexTTS).
+    # Used when a request carries no instruct of its own — a per-request instruct
+    # always wins. Lets one profile remember its natural speed/emotion settings so
+    # the web UI, the HTTP API, MCP clients and the DSH plugin all inherit them.
+    default_instruct = Column(Text, nullable=True)
 
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))

@@ -6,6 +6,7 @@ import shutil
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Optional
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -32,7 +33,7 @@ from . import history
 
 logger = logging.getLogger(__name__)
 
-CLONING_ENGINES = {"qwen", "luxtts", "chatterbox", "chatterbox_turbo", "tada", "omnivoice"}
+CLONING_ENGINES = {"qwen", "luxtts", "chatterbox", "chatterbox_turbo", "tada", "omnivoice", "indextts"}
 
 # Engines that synthesise a voice from a natural-language description
 # (voice_type "designed") rather than from samples or a preset id.
@@ -68,6 +69,7 @@ def _profile_to_response(
         design_prompt=getattr(profile, "design_prompt", None),
         default_engine=getattr(profile, "default_engine", None),
         personality=getattr(profile, "personality", None),
+        default_instruct=getattr(profile, "default_instruct", None),
         generation_count=generation_count,
         sample_count=sample_count,
         created_at=profile.created_at,
@@ -136,6 +138,26 @@ def default_engine_for_profile(profile) -> str:
     if getattr(profile, "voice_type", None) == "designed":
         return DEFAULT_DESIGN_ENGINE
     return "qwen"
+
+
+def _clean_instruct(value: Optional[str]) -> Optional[str]:
+    """空串/纯空白在库里统一存成 NULL，免得前端回填一个看不见的空串。"""
+    if value is None:
+        return None
+    text = value.strip()
+    return text or None
+
+
+def resolve_instruct(profile, request_instruct: Optional[str]) -> Optional[str]:
+    """本次请求的「传达说明」优先；没给就用档案上的默认值。
+
+    放在这一层是为了让**所有**入口行为一致：网页生成页、``POST /generate``、
+    ``/generate/stream``、OpenAI 兼容的 ``/v1/audio/speech``（走 ``instructions``
+    字段）、MCP 客户端以及 DSH 的朗读插件。
+    """
+    if request_instruct is not None and request_instruct.strip():
+        return request_instruct
+    return _clean_instruct(getattr(profile, "default_instruct", None))
 
 
 def validate_profile_engine(profile, engine: str) -> None:
@@ -216,6 +238,7 @@ async def create_profile(
         design_prompt=data.design_prompt,
         default_engine=default_engine,
         personality=data.personality,
+        default_instruct=_clean_instruct(getattr(data, "default_instruct", None)),
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
     )
@@ -442,6 +465,9 @@ async def update_profile(
         profile.default_engine = data.default_engine or None  # empty string → NULL
     if voice_type == "designed":
         profile.default_engine = default_engine
+    if "default_instruct" in getattr(data, "model_fields_set", set()):
+        # 只有请求里真的带了这个键才改（空串 = 显式清空），否则编辑档案时会把它抹掉。
+        profile.default_instruct = _clean_instruct(data.default_instruct)
     profile.updated_at = datetime.now(UTC)
 
     db.commit()

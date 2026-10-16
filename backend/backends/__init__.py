@@ -239,6 +239,7 @@ TTS_ENGINES = {
     "tada": "TADA",
     "kokoro": "Kokoro",
     "omnivoice": "OmniVoice",
+    "indextts": "IndexTTS 2.5",
 }
 
 LLM_ENGINES = {
@@ -469,6 +470,22 @@ def _get_non_qwen_tts_configs() -> list[ModelConfig]:
                 "sw",
                 "tr",
             ],
+        ),
+        ModelConfig(
+            model_name="indextts-2.5",
+            # 与其它引擎不同：IndexTTS 依赖 transformers 4.52.1（把 GPT2/generation
+            # 整份拷贝进自己仓库），而 voicebox 现有引擎依赖 4.57.x 的内部实现，
+            # 所以它跑在由后端托管的 sidecar 子进程里（见 backends/indextts_backend.py）。
+            display_name="IndexTTS 2.5 (Zero-shot cloning)",
+            engine="indextts",
+            hf_repo_id="IndexTeam/IndexTTS-2.5",
+            model_size="2.5",
+            size_mb=5200,
+            # instruct 走本引擎的语速约定：speed=1.2 / duration_factor=1.1
+            supports_instruct=True,
+            # 上游 README 明确支持中/英/日/西/阿；tokenizer 表里还有更多语言，
+            # 但质量不作承诺，所以只声明这五种。
+            languages=["zh", "en", "ja", "es", "ar"],
         ),
     ]
 
@@ -842,6 +859,12 @@ def get_tts_backend_for_engine(engine: str) -> TTSBackend:
             from .omnivoice_backend import OmniVoiceBackend
 
             backend = OmniVoiceBackend()
+        elif engine == "indextts":
+            # Sidecar-hosted engine: the backend spawns/owns
+            # D:\AI\IndexTTS\server.py instead of importing indextts in-process.
+            from .indextts_backend import IndexTTSBackend
+
+            backend = IndexTTSBackend()
         elif engine == "qwen_custom_voice":
             from .qwen_custom_voice_backend import QwenCustomVoiceBackend
 

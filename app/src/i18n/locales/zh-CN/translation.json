@@ -281,7 +281,10 @@
       "defaultEffectsHint": "自动应用于使用此声音的所有新生成的效果。",
       "personalityLabel": "人物设定",
       "personalityPlaceholder": "例如:「一位脾气暴躁的海盗,只会用航海比喻说话」",
-      "personalityHint": "这个声音是谁、说话方式如何。会驱动生成页面上的「撰写」按钮和入戏改写开关。留空则两者都隐藏。"
+      "personalityHint": "这个声音是谁、说话方式如何。会驱动生成页面上的「撰写」按钮和入戏改写开关。留空则两者都隐藏。",
+      "defaultInstructLabel": "默认传达说明",
+      "defaultInstructPlaceholder": "例如:speed=1.2（说得快一点）或 steps=15（生成更快）",
+      "defaultInstructHint": "这个声音的默认「传达说明」。生成页留空时自动带上，网页、HTTP API、MCP 客户端和朗读插件都会继承；在生成页临时改写只影响那一次。"
     },
     "avatar": {
       "alt": "头像预览"
@@ -717,7 +720,66 @@
       "show": "显示传达说明",
       "hide": "隐藏传达说明",
       "tooltip": "传达说明 (语气、情感、节奏)",
-      "placeholder": "传达说明——例如:温柔缓慢地说、威严清晰…"
+      "placeholder": "传达说明——例如:温柔缓慢地说、威严清晰…",
+      "placeholderIndextts": "可选的原生语速——例如 speed=1.2（更快）或 duration_factor=1.1（更慢），范围 0.5-2.0 倍；是模型内部的时长控制，不会像拉伸那样变调。",
+      "placeholderOmnivoice": "声音属性，用逗号分隔——例如 female, low pitch, british accent（固定词表：性别、年龄、音高、气声、口音）",
+      "helpTitle": "传达说明怎么写",
+      "helpAction": "查看这个引擎的写法",
+      "helpSyntax": "一行一个「键=值」，可用换行或分号分隔。引擎不认识的键会被忽略，不影响生成。",
+      "helpConfigured": "这个档案带默认值，已自动带入；改这里只影响这一次。",
+      "helpReset": "恢复档案默认",
+      "helpResetSame": "当前就是档案默认值",
+      "helpResetNone": "这个声音档案还没设「默认传达说明」",
+      "helpInsert": "点击插入",
+      "helpPending": "以下上游支持，但 voicebox 还没接线",
+      "help": {
+        "indextts": {
+          "summary": "IndexTTS 2.5 用键值对控制。语速是模型内部的时长调节（不是拉伸），所以不会变调。",
+          "items": {
+            "speed": "语速倍数，越大越快。等价于 duration_factor=1/值，范围 0.5-2.0。",
+            "durationFactor": "时长倍数，越大说得越慢，范围 0.5-2.0。和 speed 是倒数关系。",
+            "emoText": "用一句文字描述情绪，模型自己解析成情绪向量。首次使用会多加载 1.2 GB 的情绪模型。",
+            "emoVector": "8 维情绪向量，顺序是：高兴、愤怒、悲伤、恐惧、反感、低落、惊讶、自然。总和建议不超过 0.8。",
+            "emoAudio": "借一段参考音频的情绪（写这台机器上的绝对路径）。只借情绪，音色仍来自档案的参考音频；只取前 15 秒并重采样到 16 kHz。",
+            "alpha": "情绪强度 0-1；只在同时给了 emo_audio 时才有意义。",
+            "silence": "分段之间的静音毫秒数，默认 200。",
+            "maxTokens": "每段最多多少 token，默认 120。长句会被自动切段。",
+            "steps": "扩散步数，默认 25。越小越快、高频细节越糊（15 大约快 1.5-2 倍）。",
+            "seed": "随机种子；voicebox 请求里的种子优先。",
+            "lang": "覆盖本次的语言（zh / en / ja / es / ar）。",
+            "norm": "文本归一化开关，off 表示关闭（默认开启）。"
+          },
+          "notes": {
+            "emoExclusive": "emo_text / emo_vector / emo_audio 三者互斥：只要写了 emo_text 或 emo_vector，emo_audio 会被整段丢弃（实测两者输出逐字节相同）。",
+            "emoAudioPath": "emo_audio 的路径在引擎所在机器上解析；文件不存在会被静默忽略——不报错、不提示，等于没写。",
+            "emoAudioCut": "emo_audio 只取前 15 秒，并重采样到 16 kHz；文件再长也不会用更多内容，也不会报错。",
+            "alphaNeedsAudio": "alpha 只在同时给了 emo_audio 时生效；单独写 alpha 与完全不写等价（会被强制回 1.0）。"
+          }
+        },
+        "qwen_custom_voice": {
+          "summary": "Qwen CustomVoice 吃自由散文式的风格描述，用中文或英文写一句话即可。",
+          "items": {
+            "prose": "直接写一句自然语言描述语气、情绪与节奏。"
+          }
+        },
+        "qwen_voice_design": {
+          "summary": "Qwen VoiceDesign 同样吃自由散文，并会叠在档案里存的「声音描述」之上。",
+          "items": {
+            "prose": "直接写一句自然语言描述语气、情绪与节奏，会附加在档案的 design_prompt 后面。"
+          }
+        },
+        "omnivoice": {
+          "summary": "OmniVoice 用的是闭集词表，不是自由散文；写成它不认识的属性会直接报错。",
+          "items": {
+            "vocabulary": "逗号分隔的属性，例如 female / male、low pitch、british accent。"
+          },
+          "pending": {
+            "omnivoiceClosedVocabulary": "词表以外的新属性：会直接被上游拒绝，所以只写上面这些。"
+          }
+        }
+      },
+      "helpNotes": "限制（实测过，容易踩的坑）",
+      "helpUnknownEngine": "这个引擎的写法还没登记进帮助；请按该引擎自己的用法写，通用语法见上。"
     },
     "voiceSelector": {
       "placeholder": "选择声音…"

@@ -77,6 +77,8 @@ const MODEL_DESCRIPTIONS: Record<string, string> = {
     'Qwen3-TTS CustomVoice 0.6B by Alibaba. Lightweight version with the same 9 preset voices and instruct control. Faster inference for lower-end hardware.',
   'qwen-voice-design-1.7B':
     'Qwen3-TTS VoiceDesign 1.7B by Alibaba. Builds a voice from a written description instead of reference audio or a preset. Supports the same 10 languages.',
+  'indextts-2.5':
+    'IndexTTS 2.5 by Bilibili. Zero-shot voice cloning with emotion control; supports Chinese, English, Japanese, Spanish and Arabic, and takes a NATIVE speed factor (0.5-2.0x). Runs in its own sidecar process because it needs transformers 4.52.1 (see D:\\AI\\IndexTTS). 22kHz output.',
   'whisper-base':
     'Smallest Whisper model (74M parameters). Fast transcription with moderate accuracy.',
   'whisper-small':
@@ -420,7 +422,8 @@ export function ModelManagement() {
         m.model_name.startsWith('chatterbox') ||
         m.model_name.startsWith('tada') ||
         m.model_name.startsWith('kokoro') ||
-        m.model_name.startsWith('omnivoice'),
+        m.model_name.startsWith('omnivoice') ||
+        m.model_name.startsWith('indextts'),
     ) ?? [];
   const whisperModels = modelStatus?.models.filter((m) => m.model_name.startsWith('whisper')) ?? [];
   const llmModels = modelStatus?.models.filter((m) => m.model_name.startsWith('qwen3-')) ?? [];

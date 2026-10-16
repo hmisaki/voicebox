@@ -15,6 +15,9 @@ export const INSTRUCT_ENGINES: ReadonlySet<string> = new Set([
   'qwen_custom_voice',
   'qwen_voice_design',
   'omnivoice',
+  // IndexTTS 2.5 reads `instruct` as a speed hint: "speed=1.2" (faster) or
+  // "duration_factor=1.1" (slower). Native speed control — no time-stretch.
+  'indextts',
 ]);
 
 /** Whether the given engine should show and forward the instruct field. */

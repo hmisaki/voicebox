@@ -64,6 +64,8 @@ const ENGINE_DISPLAY_NAMES: Record<string, string> = {
   chatterbox_turbo: 'Chatterbox Turbo',
   tada: 'TADA',
   kokoro: 'Kokoro 82M',
+  omnivoice: 'OmniVoice',
+  indextts: 'IndexTTS 2.5',
 };
 
 export function formatEngineName(engine?: string, modelSize?: string): string {

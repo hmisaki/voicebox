@@ -485,6 +485,21 @@ Found a security vulnerability? Please report it responsibly. See [SECURITY.md](
 
 ---
 
+## 本仓库的改动（个人 fork）
+
+这是上游 [jamiepine/voicebox](https://github.com/jamiepine/voicebox) 的个人 fork（基线 `8af7efe`，2026-10-07），
+在 MIT 许可下保留了全部原始代码与许可证，额外做了两件事：
+
+- **接入 IndexTTS 2.5** 作为第 10 个 TTS 引擎（零样本克隆，中文/英文/日文/西班牙文/阿拉伯文，原生 0.5–2.0× 语速控制）。
+  它需要独立的依赖环境，因此跑在同仓库外的 sidecar 进程里（默认端口 `17494`）。
+- **把 `instruct`（传达说明）这条引擎私有参数通道打通到底**：新增声音档案级默认值、逐引擎帮助弹层、
+  重置按钮，并补齐 MCP 工具参数，使 Agent 也能用上语速/扩散步数/情绪控制。
+
+完整的改动清单、仓库外需要额外应用的两份补丁（sidecar 与 IndexTTS 上游）、验证方法与回滚步骤见
+**[PATCHES.md](PATCHES.md)**。仓库内还附带一份 Agent 用的操作手册：`.agents/skills/voicebox/`。
+
+---
+
 ## License
 
 MIT License — see [LICENSE](LICENSE) for details.

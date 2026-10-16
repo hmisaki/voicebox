@@ -160,6 +160,9 @@ def _migrate_profiles(engine, inspector, tables: set[str]) -> None:
         _add_column(engine, "profiles", "default_engine VARCHAR", "default_engine")
     if "personality" not in columns:
         _add_column(engine, "profiles", "personality TEXT", "personality")
+    # Default 「传达说明」— per-voice engine-specific settings (speed=1.2, steps=15...).
+    if "default_instruct" not in columns:
+        _add_column(engine, "profiles", "default_instruct TEXT", "default_instruct")
 
 
 def _migrate_generations(engine, inspector, tables: set[str]) -> None:

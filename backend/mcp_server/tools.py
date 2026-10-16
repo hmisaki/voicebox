@@ -51,12 +51,34 @@ def register_tools(mcp: FastMCP) -> None:
         personality: bool | None = None,
         language: str | None = None,
         model_size: Literal["1.7B", "0.6B", "1B", "3B"] | None = None,
+        instruct: str | None = None,
+        seed: int | None = None,
     ) -> dict[str, Any]:
         """Speak ``text`` in a voice profile.
 
         ``profile`` accepts a voice profile name (e.g. "Morgan") or id. If
         omitted, the server looks up the per-client binding for the calling
         MCP client, then falls back to the global default voice.
+
+        ``instruct`` is free-form per-request delivery control, interpreted by
+        the selected engine (same field as the ``instruct`` text box in the
+        Generate page and as ``GenerationRequest.instruct`` on POST /generate).
+        Engines that ignore it: ``kokoro``, ``luxtts``, ``chatterbox``,
+        ``chatterbox_turbo``, ``hume``. ``omnivoice`` expects a comma-separated
+        attribute list from its closed vocabulary (e.g. "female, low pitch").
+        ``indextts`` expects ``key=value`` pairs separated by newlines or
+        semicolons — ``speed`` (0.5-2.0, >1 faster), ``steps`` (diffusion steps,
+        lower = faster), ``max_tokens``, ``silence``, ``norm``, ``lang``,
+        ``seed``, ``random``, and one emotion source: ``emo_text`` (free text,
+        computed by QwenEmotion), ``emo_vector`` (7 dims 0-1, order 高兴/愤怒/
+        悲伤/恐惧/反感/低落/惊讶), or ``emo_audio`` (path to an emotion
+        reference clip; only its first 15 s are used). ``emo_text`` wins over
+        ``emo_vector``; either of them discards ``emo_audio``. Lines starting
+        with ``#`` are comments. When omitted, the profile's
+        ``default_instruct`` applies.
+
+        ``seed`` pins the sampler when the engine supports it; it may also be
+        set through the ``seed`` key inside ``instruct``.
 
         ``personality`` only matters for profiles that have a personality
         prompt — when true, the text is first rewritten in character by the
@@ -108,6 +130,8 @@ def register_tools(mcp: FastMCP) -> None:
                 language=language or vp.language,
                 personality=use_persona,
                 model_size=model_size,
+                instruct=instruct,
+                seed=seed,
                 db=db,
             )
         finally:
@@ -203,7 +227,11 @@ def register_tools(mcp: FastMCP) -> None:
         name="voicebox_list_profiles",
         description=(
             "List available voice profiles (both cloned voices and presets). "
-            "Use the returned `name` with voicebox_speak(profile=...)."
+            "Use the returned `name` with voicebox_speak(profile=...). "
+            "`default_engine` is the engine that profile pins (null = app "
+            "default) and `default_instruct` its standing delivery "
+            "instructions — pass an explicit `instruct` to voicebox_speak to "
+            "override it for one call."
         ),
     )
     async def voicebox_list_profiles() -> dict[str, Any]:
@@ -218,6 +246,8 @@ def register_tools(mcp: FastMCP) -> None:
                         "voice_type": p.voice_type,
                         "language": p.language,
                         "has_personality": bool(getattr(p, "personality", None)),
+                        "default_engine": getattr(p, "default_engine", None),
+                        "default_instruct": getattr(p, "default_instruct", None),
                     }
                     for p in profiles
                 ]
@@ -238,15 +268,17 @@ async def _speak(
     language: str | None,
     personality: bool,
     model_size: str | None = None,
+    instruct: str | None = None,
+    seed: int | None = None,
     db,
 ) -> dict[str, Any]:
     """Delegate to POST /generate — the route handles personality-rewrite
     internally when ``personality=true`` and the profile has a prompt."""
     from ..routes.generations import generate_speech
 
-    # model_size=None is intentional: generate_speech normalizes it to the
-    # engine default (see routes/generations.py), so an omitted size behaves
-    # exactly like the REST /generate endpoint with no model_size in the body.
+    # instruct=None is intentional: the route falls back to the profile's
+    # default_instruct, so an omitted instruct behaves exactly like POST
+    # /generate with no instruct in the body.
     req = models.GenerationRequest(
         profile_id=profile_id,
         text=text,
@@ -254,6 +286,8 @@ async def _speak(
         engine=engine,
         personality=personality,
         model_size=model_size,
+        instruct=instruct,
+        seed=seed,
     )
     generation = await generate_speech(req, db)
     return _speak_response(generation, profile_name, source="mcp")

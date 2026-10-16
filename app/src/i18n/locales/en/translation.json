@@ -281,7 +281,10 @@
       "defaultEffectsHint": "Effects applied automatically to all new generations with this voice.",
       "personalityLabel": "Personality",
       "personalityPlaceholder": "e.g. \"a grumpy pirate who only speaks in nautical metaphors\"",
-      "personalityHint": "Who this voice is and how they talk. Drives the Compose button and the in-character rewrite toggle on the generate page. Leave blank to hide both."
+      "personalityHint": "Who this voice is and how they talk. Drives the Compose button and the in-character rewrite toggle on the generate page. Leave blank to hide both.",
+      "defaultInstructLabel": "Default delivery instructions",
+      "defaultInstructPlaceholder": "e.g. speed=1.2 (speak a bit faster) or steps=15 (generate faster)",
+      "defaultInstructHint": "Default delivery instructions for this voice. Used whenever the generate page leaves the field empty — the web UI, HTTP API, MCP clients and the read-aloud plugin all inherit it. Overriding it on the generate page affects only that run."
     },
     "avatar": {
       "alt": "Avatar preview"
@@ -718,7 +721,65 @@
       "hide": "Hide delivery instructions",
       "tooltip": "Delivery instructions (tone, emotion, pace)",
       "placeholder": "Delivery instructions — e.g. Speak slowly with warmth, Authoritative and clear…",
-      "placeholderOmnivoice": "Voice attributes, comma-separated — e.g. female, low pitch, british accent (fixed vocabulary: gender, age, pitch, whisper, accent)"
+      "placeholderOmnivoice": "Voice attributes, comma-separated — e.g. female, low pitch, british accent (fixed vocabulary: gender, age, pitch, whisper, accent)",
+      "placeholderIndextts": "Optional native speed — e.g. speed=1.2 (faster) or duration_factor=1.1 (slower). Range 0.5-2.0x, no time-stretch artefacts.",
+      "helpTitle": "How to write delivery instructions",
+      "helpAction": "See how this engine reads it",
+      "helpSyntax": "One `key=value` per line; newlines or semicolons separate items. Keys the engine does not know are ignored — the generation still runs.",
+      "helpConfigured": "This profile ships a default, pre-filled here. Editing it only affects this run.",
+      "helpReset": "Reset to profile default",
+      "helpResetSame": "Already the profile default",
+      "helpResetNone": "This voice profile has no default delivery instructions yet",
+      "helpInsert": "Click to insert",
+      "helpPending": "Upstream supports these, but Voicebox does not forward them yet",
+      "help": {
+        "indextts": {
+          "summary": "IndexTTS 2.5 takes key=value pairs. Its speed control is the model's own duration predictor, so it does not pitch-shift the way time-stretching does.",
+          "items": {
+            "speed": "Speaking-rate multiplier, higher is faster. Equivalent to duration_factor=1/value, range 0.5-2.0.",
+            "durationFactor": "Duration multiplier, higher is slower, range 0.5-2.0. The reciprocal of speed.",
+            "emoText": "Describe the emotion in words; the model derives the emotion vector. First use loads an extra 1.2 GB emotion model.",
+            "emoVector": "An 8-value emotion vector, ordered: happy, angry, sad, afraid, disgusted, melancholic, surprised, calm. Keep the sum at or below 0.8.",
+            "emoAudio": "Borrow the emotion from a reference clip (absolute path on this machine). Only the emotion is borrowed — timbre still comes from the profile reference; only the first 15 s are used, resampled to 16 kHz.",
+            "alpha": "Emotion strength 0-1; only meaningful together with emo_audio.",
+            "silence": "Silence between segments in milliseconds, default 200.",
+            "maxTokens": "Maximum tokens per segment, default 120. Longer text is split automatically.",
+            "steps": "Diffusion steps, default 25. Fewer is faster and softer in the high end (15 is roughly 1.5-2x faster).",
+            "seed": "Random seed; a seed on the request wins.",
+            "lang": "Override the language for this run (zh / en / ja / es / ar).",
+            "norm": "Text normalisation switch; off disables it (on by default)."
+          },
+          "notes": {
+            "emoExclusive": "emo_text / emo_vector / emo_audio are mutually exclusive: as soon as emo_text or emo_vector is set, emo_audio is dropped entirely (measured: byte-identical output).",
+            "emoAudioPath": "The emo_audio path is resolved on the engine host; a missing file is silently ignored — no error, no warning, exactly as if it were not written.",
+            "emoAudioCut": "Only the first 15 s of emo_audio are used, resampled to 16 kHz; a longer file neither errors nor contributes more.",
+            "alphaNeedsAudio": "alpha only applies when emo_audio is present; writing alpha alone is the same as not writing it (it is forced back to 1.0)."
+          }
+        },
+        "qwen_custom_voice": {
+          "summary": "Qwen CustomVoice accepts free-form prose — one sentence describing tone, emotion and pacing.",
+          "items": {
+            "prose": "Write a plain-language description of tone, emotion and pace."
+          }
+        },
+        "qwen_voice_design": {
+          "summary": "Qwen VoiceDesign also accepts free-form prose and layers it on top of the profile's stored voice description.",
+          "items": {
+            "prose": "Write a plain-language description; it is appended after the profile's design_prompt."
+          }
+        },
+        "omnivoice": {
+          "summary": "OmniVoice uses a closed vocabulary instead of prose, and rejects attributes it does not recognise.",
+          "items": {
+            "vocabulary": "Comma-separated attributes, e.g. female / male, low pitch, british accent."
+          },
+          "pending": {
+            "omnivoiceClosedVocabulary": "Attributes outside that vocabulary are rejected upstream, so stick to the list above."
+          }
+        }
+      },
+      "helpNotes": "Limits (measured — easy to trip over)",
+      "helpUnknownEngine": "This engine's syntax is not registered in the help yet; follow the engine's own documentation. Generic syntax above."
     },
     "voiceSelector": {
       "placeholder": "Select a voice…"

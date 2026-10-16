@@ -1,11 +1,20 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useMatchRoute } from '@tanstack/react-router';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Dices, Loader2, SlidersHorizontal, Sparkles, Wand2 } from 'lucide-react';
+import {
+  Dices,
+  HelpCircle,
+  Loader2,
+  RotateCcw,
+  SlidersHorizontal,
+  Sparkles,
+  Wand2,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -17,11 +26,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { apiClient } from '@/lib/api/client';
 import { engineSupportsInstruct } from '@/lib/constants/engines';
+import { instructHelpFor } from '@/lib/constants/instructHelp';
 import { getLanguageOptionsForEngine, type LanguageCode } from '@/lib/constants/languages';
 import { useGenerationForm } from '@/lib/hooks/useGenerationForm';
 import { useProfile, useProfiles } from '@/lib/hooks/useProfiles';
 import { useStory } from '@/lib/hooks/useStories';
 import { cn } from '@/lib/utils/cn';
+import { formatEngineName } from '@/lib/utils/format';
 import { useGenerationStore } from '@/stores/generationStore';
 import { useStoryStore } from '@/stores/storyStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -48,6 +59,9 @@ export function FloatingGenerateBox({
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  /** Last value we auto-filled into the delivery-instructions field, so a
+   *  profile switch does not overwrite anything the user typed by hand. */
+  const autoInstructRef = useRef<string>('');
   const matchRoute = useMatchRoute();
   const isStoriesRoute = matchRoute({ to: '/stories' });
   const selectedStoryId = useStoryStore((state) => state.selectedStoryId);
@@ -154,7 +168,8 @@ export function FloatingGenerateBox({
     | 'kokoro'
     | 'qwen_custom_voice'
     | 'qwen_voice_design'
-    | 'omnivoice';
+    | 'omnivoice'
+    | 'indextts';
   useEffect(() => {
     if (selectedProfile?.language) {
       form.setValue('language', selectedProfile.language as LanguageCode);
@@ -204,7 +219,46 @@ export function FloatingGenerateBox({
     if (selectedProfile && !selectedProfile.personality?.trim()) {
       form.setValue('personality', false);
     }
+    // Pre-fill the delivery instructions from the profile default — but never
+    // clobber text the user typed. Only fill when the field is empty or still
+    // holds the default we filled in for the previous profile. The backend
+    // applies the same default when the field is left empty, so this is a
+    // convenience, not the source of truth.
+    if (selectedProfile && engineSupportsInstruct(form.getValues('engine'))) {
+      const profileDefault = selectedProfile.default_instruct?.trim() ?? '';
+      const current = (form.getValues('instruct') ?? '').trim();
+      if (current === '' || current === autoInstructRef.current.trim()) {
+        autoInstructRef.current = profileDefault;
+        if (profileDefault) {
+          form.setValue('instruct', profileDefault);
+          setIsInstructExpanded(true);
+        } else if (current !== '') {
+          form.setValue('instruct', '');
+        }
+      }
+    }
   }, [selectedProfile, effectPresets, form]);
+
+  // ---- Delivery instructions (instruct) helpers ----------------------------
+  const instructEngine = form.watch('engine');
+  const instructHelp = instructHelpFor(instructEngine);
+  const instructValue = form.watch('instruct') ?? '';
+  const profileDefaultInstruct = selectedProfile?.default_instruct?.trim() ?? '';
+  // reset 常显（否则用户不知道有这个功能）；只在「档案有默认值且当前值不是它」时可用。
+  const canResetInstruct =
+    Boolean(profileDefaultInstruct) && instructValue.trim() !== profileDefaultInstruct;
+
+  const insertInstructSnippet = (snippet: string) => {
+    const current = form.getValues('instruct') ?? '';
+    form.setValue('instruct', current.trim() ? `${current.trimEnd()}\n${snippet}` : snippet, {
+      shouldDirty: true,
+    });
+  };
+
+  const resetInstructToDefault = () => {
+    autoInstructRef.current = profileDefaultInstruct;
+    form.setValue('instruct', profileDefaultInstruct, { shouldDirty: true });
+  };
 
   // Auto-resize textarea based on content (only when expanded)
   useEffect(() => {
@@ -427,13 +481,19 @@ export function FloatingGenerateBox({
                                         ? 'bg-accent text-accent-foreground border border-accent hover:bg-accent/90'
                                         : 'bg-card border border-border hover:bg-background/50',
                                     )}
-                                    aria-label={active ? t('generation.persona.ariaLabelActive') : t('generation.persona.ariaLabelInactive')}
+                                    aria-label={
+                                      active
+                                        ? t('generation.persona.ariaLabelActive')
+                                        : t('generation.persona.ariaLabelInactive')
+                                    }
                                     aria-pressed={active}
                                   >
                                     <Wand2 className="h-4 w-4" />
                                   </Button>
                                   <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap rounded-md bg-popover px-3 py-1.5 text-xs text-popover-foreground border border-border opacity-0 transition-opacity group-hover:opacity-100 z-[9999]">
-                                    {active ? t('generation.persona.tooltipActive') : t('generation.persona.tooltipInactive')}
+                                    {active
+                                      ? t('generation.persona.tooltipActive')
+                                      : t('generation.persona.tooltipInactive')}
                                   </span>
                                 </div>
                               </FormControl>
@@ -529,19 +589,162 @@ export function FloatingGenerateBox({
                     name="instruct"
                     render={({ field }) => (
                       <FormItem className="mt-2">
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            placeholder={
-                              form.watch('engine') === 'omnivoice'
-                                ? t('generation.instruct.placeholderOmnivoice')
-                                : t('generation.instruct.placeholder')
-                            }
-                            className="resize-none bg-transparent border border-accent/20 focus-visible:ring-1 focus-visible:ring-accent/40 rounded-2xl text-sm placeholder:text-muted-foreground/60 w-full px-3 py-2"
-                            style={{ minHeight: '60px', maxHeight: '160px' }}
-                            maxLength={500}
-                          />
-                        </FormControl>
+                        <div className="relative">
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder={
+                                form.watch('engine') === 'omnivoice'
+                                  ? t('generation.instruct.placeholderOmnivoice')
+                                  : form.watch('engine') === 'indextts'
+                                    ? t('generation.instruct.placeholderIndextts')
+                                    : t('generation.instruct.placeholder')
+                              }
+                              className="resize-none bg-transparent border border-accent/20 focus-visible:ring-1 focus-visible:ring-accent/40 rounded-2xl text-sm placeholder:text-muted-foreground/60 w-full px-3 py-2 pr-16"
+                              style={{ minHeight: '60px', maxHeight: '160px' }}
+                              maxLength={500}
+                            />
+                          </FormControl>
+                          <div className="absolute right-2 bottom-2 flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={resetInstructToDefault}
+                              disabled={!canResetInstruct}
+                              aria-label={t('generation.instruct.helpReset')}
+                              title={
+                                !profileDefaultInstruct
+                                  ? t('generation.instruct.helpResetNone')
+                                  : canResetInstruct
+                                    ? t('generation.instruct.helpReset')
+                                    : t('generation.instruct.helpResetSame')
+                              }
+                              className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-accent/10 hover:text-accent disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-muted-foreground/70"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </button>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  aria-label={t('generation.instruct.helpAction')}
+                                  title={t('generation.instruct.helpTitle')}
+                                  className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-accent/10 hover:text-accent"
+                                >
+                                  <HelpCircle className="h-4 w-4" />
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                key={instructEngine}
+                                align="end"
+                                side="top"
+                                className="max-h-[60vh] w-[26rem] space-y-3 overflow-y-auto text-xs"
+                              >
+                                <div className="space-y-1">
+                                  <p className="text-sm font-medium">
+                                    {t('generation.instruct.helpTitle')}
+                                    <span className="ml-1 font-mono text-[11px] text-accent">
+                                      · {formatEngineName(instructEngine, form.watch('modelSize'))}
+                                    </span>
+                                  </p>
+                                  <p className="text-muted-foreground">
+                                    {instructHelp
+                                      ? t(`generation.instruct.help.${instructEngine}.summary`)
+                                      : t('generation.instruct.helpUnknownEngine')}
+                                  </p>
+                                </div>
+
+                                <p className="text-[11px] text-muted-foreground/80">
+                                  {t('generation.instruct.helpSyntax')}
+                                </p>
+
+                                {instructHelp && instructHelp.items.length > 0 && (
+                                  <div className="space-y-1.5">
+                                    {instructHelp.items.map((item) => (
+                                      <button
+                                        key={item.id}
+                                        type="button"
+                                        onClick={() => insertInstructSnippet(item.insert)}
+                                        className="flex w-full gap-2 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-muted/60"
+                                      >
+                                        <code className="mt-0.5 shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground">
+                                          {item.key}
+                                          {item.value ? (
+                                            <span className="text-muted-foreground">
+                                              ={item.value}
+                                            </span>
+                                          ) : null}
+                                        </code>
+                                        <span className="text-muted-foreground">
+                                          {t(
+                                            `generation.instruct.help.${instructEngine}.items.${item.id}`,
+                                          )}
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {instructHelp && instructHelp.examples.length > 0 && (
+                                  <div className="space-y-1.5">
+                                    <p className="font-medium">
+                                      {t('generation.instruct.helpInsert')}
+                                    </p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {instructHelp.examples.map((example) => (
+                                        <button
+                                          key={example}
+                                          type="button"
+                                          onClick={() => insertInstructSnippet(example)}
+                                          className="rounded-full border border-accent/30 px-2 py-0.5 font-mono text-[11px] text-accent transition-colors hover:bg-accent/10"
+                                        >
+                                          {example}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {instructHelp?.notes && instructHelp.notes.length > 0 && (
+                                  <div className="space-y-1 border-t border-border pt-2">
+                                    <p className="font-medium text-muted-foreground">
+                                      {t('generation.instruct.helpNotes')}
+                                    </p>
+                                    {instructHelp.notes.map((id) => (
+                                      <p key={id} className="text-[11px] text-muted-foreground/80">
+                                        •{' '}
+                                        {t(
+                                          `generation.instruct.help.${instructEngine}.notes.${id}`,
+                                        )}
+                                      </p>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {instructHelp?.pending && instructHelp.pending.length > 0 && (
+                                  <div className="space-y-1 border-t border-border pt-2">
+                                    <p className="font-medium text-muted-foreground">
+                                      {t('generation.instruct.helpPending')}
+                                    </p>
+                                    {instructHelp.pending.map((id) => (
+                                      <p key={id} className="text-[11px] text-muted-foreground/80">
+                                        •{' '}
+                                        {t(
+                                          `generation.instruct.help.${instructEngine}.pending.${id}`,
+                                        )}
+                                      </p>
+                                    ))}
+                                  </div>
+                                )}
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        </div>
+                        {profileDefaultInstruct &&
+                          instructValue.trim() === profileDefaultInstruct && (
+                            <p className="px-1 text-[11px] text-muted-foreground/70">
+                              {t('generation.instruct.helpConfigured')}
+                            </p>
+                          )}
                         <FormMessage className="text-xs" />
                       </FormItem>
                     )}
@@ -578,7 +781,6 @@ export function FloatingGenerateBox({
                       </Select>
                     </div>
                   )}
-
 
                   <FormField
                     control={form.control}

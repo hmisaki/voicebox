@@ -98,6 +98,9 @@ export const ENGINE_LANGUAGES: Record<string, readonly LanguageCode[]> = {
     'tr',
     'zh',
   ],
+  // IndexTTS 2.5 ships Chinese/English/Japanese/Spanish/Arabic. Its tokenizer
+  // knows more ISO codes, but only these five are quality-committed.
+  indextts: ['ar', 'en', 'es', 'ja', 'zh'],
 } as const;
 
 /** Helper: get language options for a given engine. */

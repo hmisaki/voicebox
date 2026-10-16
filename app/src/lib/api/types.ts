@@ -14,6 +14,11 @@ export interface VoiceProfileCreate {
   default_engine?: string;
   /** Free-form character prompt used by compose and the `/generate` personality-rewrite path. */
   personality?: string;
+  /**
+   * Default 「传达说明」(instruct) for this voice — engine-specific `key=value`
+   * lines such as `speed=1.2` or `steps=15`. Used when a request sends none.
+   */
+  default_instruct?: string;
 }
 
 export interface VoiceProfileResponse {
@@ -29,6 +34,7 @@ export interface VoiceProfileResponse {
   design_prompt?: string;
   default_engine?: string;
   personality?: string | null;
+  default_instruct?: string | null;
   generation_count: number;
   sample_count: number;
   created_at: string;
@@ -70,7 +76,7 @@ export interface GenerationRequest {
   text: string;
   language: LanguageCode;
   seed?: number;
-  model_size?: '1.7B' | '0.6B' | '1B' | '3B';
+  model_size?: '1.7B' | '0.6B' | '1B' | '3B' | '2.5';
   engine?:
     | 'qwen'
     | 'qwen_custom_voice'
@@ -80,7 +86,8 @@ export interface GenerationRequest {
     | 'chatterbox_turbo'
     | 'tada'
     | 'kokoro'
-    | 'omnivoice';
+    | 'omnivoice'
+    | 'indextts';
   instruct?: string;
   /** When true and the profile has a personality prompt, input text is rewritten in-character before TTS. */
   personality?: boolean;

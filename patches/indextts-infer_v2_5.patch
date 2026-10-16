@@ -1,0 +1,29 @@
+﻿diff --git a/indextts/infer_v2_5.py b/indextts/infer_v2_5.py
+index 2458379..66f750b 100644
+--- a/indextts/infer_v2_5.py
++++ b/indextts/infer_v2_5.py
+@@ -734,6 +734,10 @@ class IndexTTS2:
+         num_beams = generation_kwargs.pop("num_beams", 3)
+         repetition_penalty = generation_kwargs.pop("repetition_penalty", 10.0)
+         max_mel_tokens = generation_kwargs.pop("max_mel_tokens", 1500)
++        # dsh: 扩散步数覆盖值。必须 pop 出来，否则会被原样转发给 GPT 的
++        # generate()，那里不认识这个 kwarg 会直接抛
++        # ValueError: The following `model_kwargs` are not used by the model
++        diffusion_steps_override = generation_kwargs.pop("diffusion_steps", None)
+         sampling_rate = 22050
+ 
+         wavs = []
+@@ -823,7 +827,12 @@ class IndexTTS2:
+                 dtype = None
+                 with torch.amp.autocast(text_tokens.device.type, enabled=dtype is not None, dtype=dtype):
+                     m_start_time = time.perf_counter()
+-                    diffusion_steps = 25
++                    # dsh: 步数原本写死 25。允许调用方通过 generation_kwargs 覆盖
++                    # （voicebox 的「传达说明」steps=15 走这条路），环境变量兜底。
++                    diffusion_steps = int(
++                        diffusion_steps_override
++                        or os.environ.get("INDEXTTS_DIFFUSION_STEPS", 25)
++                    )
+                     inference_cfg_rate = 0.7
+                     S_infer = self.semantic_codec.decode(codes)
+                     target_lengths = torch.LongTensor([int(S_infer.shape[1] * 1.72 * duration_factor)]).to(codes.device)

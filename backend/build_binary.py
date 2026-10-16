@@ -311,6 +311,14 @@ def build_server(cuda=False, rocm=False):
             # omnivoice.utils.audio.
             "--hidden-import",
             "pydub",
+            # IndexTTS 2.5 — sidecar-hosted engine. The engine's own libraries
+            # (transformers 4.52.1 + indextts) deliberately live OUTSIDE this
+            # app in D:\AI\IndexTTS (shadow dirs), so nothing from them is
+            # bundled. Only the backend module ships; the sidecar is started
+            # with a plain interpreter (env INDEXTTS_PYTHON, else sys.executable)
+            # so it keeps working even when voicebox itself is a frozen exe.
+            "--hidden-import",
+            "backend.backends.indextts_backend",
             # Kokoro 82M — lightweight TTS engine using misaki G2P
             # collect-all is required because transformers introspects .py source
             # files at runtime (e.g. _can_set_attn_implementation opens the class
